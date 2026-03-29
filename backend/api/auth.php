@@ -16,6 +16,9 @@ function handleLogin(array $input): void {
     $user = $stmt->fetch();
 
     if (!$user || !password_verify($password, $user['heslo'])) {
+        require_once __DIR__ . '/logs.php';
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? null;
+        $db->prepare('INSERT INTO system_log (akcia, popis, ip_adresa) VALUES (?, ?, ?)')->execute(['login_failed', "Neúspešné prihlásenie pre email: $email", $ip]);
         sendError(401, 'Nesprávny email alebo heslo');
     }
 
@@ -25,6 +28,9 @@ function handleLogin(array $input): void {
 
     // Generovanie tokenu
     $token = Auth::generateToken($user);
+
+    require_once __DIR__ . '/logs.php';
+    writeLog($db, 'login', "Prihlásenie: {$user['meno']} {$user['priezvisko']}", $user['id'], "{$user['meno']} {$user['priezvisko']}");
 
     sendJSON([
         'token' => $token,

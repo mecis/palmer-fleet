@@ -73,14 +73,16 @@ function createUser(array $input): void {
         trim($input['telefon'] ?? '') ?: null,
     ]);
 
-    sendJSON([
-        'id' => (int)$db->lastInsertId(),
-        'message' => 'Používateľ bol vytvorený'
-    ], 201);
+    $newId = (int)$db->lastInsertId();
+    $creator = Auth::verifyToken();
+    require_once __DIR__ . '/logs.php';
+    writeLog($db, 'user_created', "Vytvorený používateľ: $meno $priezvisko ($email), rola: $rola", $creator['id'] ?? null, isset($creator) ? ($creator['meno'] ?? '') . ' ' . ($creator['priezvisko'] ?? '') : null);
+
+    sendJSON(['id' => $newId, 'message' => 'Používateľ bol vytvorený'], 201);
 }
 
 function updateUser(int $id, array $input): void {
-    Auth::requireRole(['admin']);
+    $currentUser = Auth::requireRole(['admin']);
 
     $db = Database::connect();
 
@@ -88,6 +90,12 @@ function updateUser(int $id, array $input): void {
     $check->execute([$id]);
     if (!$check->fetch()) {
         sendError(404, 'Používateľ nenájdený');
+    }
+
+    // Admin nemôže zmeniť svoju vlastnú rolu ani deaktivovať sám seba
+    $isSelf = ((int)$currentUser['id'] === $id);
+    if ($isSelf) {
+        unset($input['rola'], $input['aktivny']);
     }
 
     // Aktualizácia základných údajov
@@ -117,6 +125,9 @@ function updateUser(int $id, array $input): void {
         $stmt = $db->prepare('UPDATE users SET heslo = ? WHERE id = ?');
         $stmt->execute([password_hash($input['heslo'], PASSWORD_BCRYPT), $id]);
     }
+
+    require_once __DIR__ . '/logs.php';
+    writeLog($db, 'user_updated', "Upravený používateľ ID: $id" . ($isSelf ? ' (vlastný profil)' : ''), $currentUser['id'], ($currentUser['meno'] ?? '') . ' ' . ($currentUser['priezvisko'] ?? ''));
 
     sendJSON(['message' => 'Používateľ bol aktualizovaný']);
 }

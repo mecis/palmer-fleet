@@ -62,10 +62,45 @@ switch ($resource) {
         else sendError(405, 'Metóda nie je povolená');
         break;
 
+    // --- DRIVERS (driver details + documents) ---
+    case 'drivers':
+        require_once __DIR__ . '/api/drivers.php';
+        $driverId = (int)($segments[1] ?? 0);
+        $docId    = (int)($segments[3] ?? 0);
+        $sub      = $segments[2] ?? '';   // 'documents'
+
+        if ($method === 'GET'    && $driverId && !$sub)          getDriverDetail($driverId);
+        elseif ($method === 'PUT'    && $driverId && !$sub)      saveDriverDetail($driverId, $input);
+        elseif ($method === 'POST'   && $driverId && $sub === 'documents') uploadDriverDocument($driverId);
+        elseif ($method === 'GET'    && $driverId && $sub === 'documents' && $docId) downloadDriverDocument($driverId, $docId);
+        elseif ($method === 'DELETE' && $driverId && $sub === 'documents' && $docId) deleteDriverDocument($driverId, $docId);
+        else sendError(405, 'Metóda nie je povolená');
+        break;
+
     // --- DASHBOARD ---
     case 'dashboard':
         require_once __DIR__ . '/api/dashboard.php';
         if ($method === 'GET') getDashboard();
+        else sendError(405, 'Metóda nie je povolená');
+        break;
+
+    // --- TRACKING (Webdispatching) ---
+    case 'tracking':
+        require_once __DIR__ . '/api/tracking.php';
+        $action = $segments[1] ?? '';
+        if ($method === 'GET' && $action === 'positions') getPositions();
+        elseif ($method === 'GET' && $action === 'cars')    getTrackingCars();
+        elseif ($method === 'GET'  && $action === 'drivers')  getDrivers();
+        elseif ($method === 'PUT'  && $action === 'driver')   updateDriver((int)($segments[2] ?? 0), $input);
+        elseif ($method === 'GET' && $action === 'history') getPositionHistory();
+        elseif ($method === 'GET' && $action === 'status')  getTrackingStatus();
+        else sendError(404, 'Endpoint nenájdený');
+        break;
+
+    // --- LOGS ---
+    case 'logs':
+        require_once __DIR__ . '/api/logs.php';
+        if ($method === 'GET') getLogs();
         else sendError(405, 'Metóda nie je povolená');
         break;
 
