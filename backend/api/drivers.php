@@ -38,7 +38,12 @@ function drvLog(array $user, string $akcia, string $popis): void {
 // ─── GET /drivers/{wdId} ─────────────────────────────────────────────────────
 
 function getDriverDetail(int $wdId): void {
-    $user = Auth::requireRole(['admin', 'dispecer', 'manazer']);
+    $user = Auth::requireAuth();
+    if (!in_array($user['rola'], ['admin', 'dispecer', 'manazer'])) {
+        if ($user['rola'] !== 'vodic' || (int)($user['wd_driver_id'] ?? 0) !== $wdId) {
+            sendError(403, 'Nedostatočné oprávnenie');
+        }
+    }
     $pdo  = Database::connect();
 
     $det = $pdo->prepare('SELECT * FROM driver_details WHERE wd_driver_id = ?');
@@ -51,8 +56,8 @@ function getDriverDetail(int $wdId): void {
     if (!canSeeSalary($user)) unset($d['mzda']);
 
     $docs = $pdo->prepare(
-        'SELECT id, nazov, typ_dokumentu, velkost, mime_type, datum_expiracie, datum_nahratia
-         FROM driver_documents WHERE wd_driver_id = ? ORDER BY datum_nahratia DESC'
+        'SELECT id, nazov, typ_dokumentu, velkost, mime_type
+         FROM driver_documents WHERE wd_driver_id = ?'
     );
     $docs->execute([$wdId]);
 
@@ -117,7 +122,6 @@ function uploadDriverDocument(int $wdId): void {
 
     $typ   = $_POST['typ_dokumentu']    ?? 'ine';
     $nazov = trim($_POST['nazov'] ?? '') ?: pathinfo($file['name'], PATHINFO_FILENAME);
-    $expir = $_POST['datum_expiracie']  ?? null;
     $ext   = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
     $filename = $wdId . '_' . uniqid() . '.' . $ext;
@@ -128,9 +132,9 @@ function uploadDriverDocument(int $wdId): void {
     }
 
     $pdo->prepare(
-        'INSERT INTO driver_documents (wd_driver_id, nahral_id, nazov, typ_dokumentu, cesta_suboru, velkost, mime_type, datum_expiracie)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    )->execute([$wdId, $user['id'], $nazov, $typ, $filename, $file['size'], $mime, $expir ?: null]);
+        'INSERT INTO driver_documents (wd_driver_id, nahral_id, nazov, typ_dokumentu, cesta_suboru, velkost, mime_type)
+         VALUES (?, ?, ?, ?, ?, ?, ?)'
+    )->execute([$wdId, $user['id'], $nazov, $typ, $filename, $file['size'], $mime]);
 
     drvLog($user, 'driver_doc_upload', "Dokument '$nazov' nahraný pre WD#$wdId");
     sendJSON(['message' => 'Dokument bol nahraný', 'id' => $pdo->lastInsertId()]);

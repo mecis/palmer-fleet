@@ -71,7 +71,7 @@ function Tracking() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+      <div className="tracking-layout" style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '1.5rem', alignItems: 'start' }}>
 
         {/* Zoznam vozidiel */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -110,7 +110,7 @@ function Tracking() {
         {selected ? (
           <div className="card">
             <h2 style={{ marginBottom: '1.25rem' }}>{selected.identifikator || selected.carid}</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
               <InfoRow label="Vodič"       value={selected.driver || '—'} />
               <InfoRow label="Rýchlosť"    value={selected.speed > 0 ? `${selected.speed} km/h` : 'Stojí'} />
               <InfoRow label="Čas (local)" value={selected.localpostime ? new Date(selected.localpostime).toLocaleString('sk-SK') : '—'} />

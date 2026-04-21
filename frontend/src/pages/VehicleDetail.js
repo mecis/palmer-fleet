@@ -48,12 +48,12 @@ function VehicleDetail() {
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+      <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
 
         {/* Aktuálna poloha */}
         <div className="card">
           <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Aktuálna poloha</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <InfoRow label="Rýchlosť"     value={`${speed} km/h`} />
             <InfoRow label="Odometer"     value={`${odometer} km`} />
             <InfoRow label="Latitude"     value={vehicle.latitude  || '—'} />
@@ -77,7 +77,7 @@ function VehicleDetail() {
         {/* Vodič a vozidlo */}
         <div className="card">
           <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Vozidlo a vodič</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <InfoRow label="Vodič"   value={vehicle.driver || '—'} />
             <InfoRow label="Car ID"  value={vehicle.carid  || '—'} />
           </div>

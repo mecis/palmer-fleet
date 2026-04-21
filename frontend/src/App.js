@@ -4,11 +4,11 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Vehicles from './pages/Vehicles';
-import VehicleDetail from './pages/VehicleDetail.js';
 import Users from './pages/Users';
 import SystemLog from './pages/SystemLog';
-import Tracking from './pages/Tracking';
 import Drivers from './pages/Drivers';
+import Reminders from './pages/Reminders';
+import WdDebug from './pages/WdDebug';
 import './App.css';
 
 function PrivateRoute({ children }) {
@@ -19,6 +19,7 @@ function PrivateRoute({ children }) {
 
 function AppRoutes() {
   const { user } = useAuth();
+  const isVodic = user?.rola === 'vodic';
 
   return (
     <Routes>
@@ -26,11 +27,12 @@ function AppRoutes() {
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={<Dashboard />} />
         <Route path="vozidla" element={<Vehicles />} />
-        <Route path="vozidla/:id" element={<VehicleDetail />} />
-        <Route path="pouzivatelia" element={<Users />} />
-        <Route path="sledovanie" element={<Tracking />} />
         <Route path="vodici" element={<Drivers />} />
-        <Route path="system-log" element={<SystemLog />} />
+        {!isVodic && <Route path="pouzivatelia" element={<Users />} />}
+        {!isVodic && <Route path="upomienky" element={<Reminders />} />}
+        {!isVodic && <Route path="system-log" element={<SystemLog />} />}
+        {user?.rola === 'admin' && <Route path="wd-debug" element={<WdDebug />} />}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );

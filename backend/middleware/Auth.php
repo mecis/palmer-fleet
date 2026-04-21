@@ -11,10 +11,11 @@ class Auth {
     public static function generateToken(array $user): string {
         $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
         $payload = json_encode([
-            'id'   => $user['id'],
-            'email' => $user['email'],
-            'rola' => $user['rola'],
-            'exp'  => time() + (60 * 60 * 8) // 8 hodín
+            'id'           => $user['id'],
+            'email'        => $user['email'],
+            'rola'         => $user['rola'],
+            'wd_driver_id' => isset($user['wd_driver_id']) ? (int)$user['wd_driver_id'] : null,
+            'exp'          => time() + (60 * 60 * 8) // 8 hodín
         ]);
 
         $base64Header  = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));

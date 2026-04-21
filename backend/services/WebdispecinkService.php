@@ -60,10 +60,120 @@ class WebdispecinkService {
         return trim($res ?? '') === '1';
     }
 
+    /** Zoznam príves (správna metóda) */
+    public static function getTrailersList(): array {
+        $res = self::call('_getTrailer2', array_merge(self::auth(), [
+            'activeOnly' => 0,
+        ]));
+        return self::rows($res);
+    }
+
     /** Zoznam vodičov */
     public static function getDriversList(bool $includeDisabled = false): array {
         $res = self::call('_getDriversList', array_merge(self::auth(), [
             'disabled' => $includeDisabled ? 1 : 0,
+        ]));
+        return self::rows($res);
+    }
+
+    /** Rozšírený zoznam vodičov */
+    public static function getDriversList2(): array {
+        $res = self::call('_getDriversList2', self::auth());
+        return self::rows($res);
+    }
+
+    /** Skupiny vozidiel */
+    public static function getCarGroups(): array {
+        $res = self::call('_getCargroups', self::auth());
+        return self::rows($res);
+    }
+
+    /** Atribúty vozidla (značka, model, VIN, ...) */
+    public static function getCarAtribut(int $carId): array {
+        $res = self::call('_getCarAtribut2', array_merge(self::auth(), [
+            'IdCar' => $carId,
+        ]));
+        return self::rows($res);
+    }
+
+    /** Aktívne výstrahy kontrolky */
+    public static function getWarningLightsActive(int $carId): array {
+        $res = self::call('_getWarningLightsActive', array_merge(self::auth(), [
+            'IdCar' => $carId,
+        ]));
+        return self::rows($res);
+    }
+
+    /** História výstrah kontroliek */
+    public static function getWarningLightsHistory(int $carId, string $from, string $to): array {
+        $res = self::call('_getWarningLightsHistory', array_merge(self::auth(), [
+            'IdCar'      => $carId,
+            'GMDateFrom' => $from,
+            'GMDateTo'   => $to,
+        ]));
+        return self::rows($res);
+    }
+
+    /** Palivové karty */
+    public static function getFuelCards(): array {
+        $res = self::call('_getFuelCards', self::auth());
+        return self::rows($res);
+    }
+
+    /** Kniha jázd */
+    public static function getCarLogBook(int $carId, string $from, string $to): array {
+        $res = self::call('_getCarLogBook', array_merge(self::auth(), [
+            'IdCar'      => $carId,
+            'GMDateFrom' => $from,
+            'GMDateTo'   => $to,
+        ]));
+        return self::rows($res);
+    }
+
+    /** Prekročenie rýchlosti */
+    public static function getCarOverSpeed(int $carId, string $from, string $to): array {
+        $res = self::call('_getCarOverSpeed', array_merge(self::auth(), [
+            'IdCar'      => $carId,
+            'GMDateFrom' => $from,
+            'GMDateTo'   => $to,
+        ]));
+        return self::rows($res);
+    }
+
+    /** Hraničné priechody */
+    public static function getBorderCrossing(int $carId, string $from, string $to): array {
+        $res = self::call('_getBorderCrossing', array_merge(self::auth(), [
+            'IdCar'      => $carId,
+            'GMDateFrom' => $from,
+            'GMDateTo'   => $to,
+        ]));
+        return self::rows($res);
+    }
+
+    /** Štatistiky vodičov */
+    public static function getStaDrivers(string $from, string $to): array {
+        $res = self::call('_getStaDrivers', array_merge(self::auth(), [
+            'GMDateFrom' => $from,
+            'GMDateTo'   => $to,
+        ]));
+        return self::rows($res);
+    }
+
+    /** Štatistiky vozidiel */
+    public static function getStaCars(string $from, string $to): array {
+        $res = self::call('_getStaCars', array_merge(self::auth(), [
+            'GMDateFrom' => $from,
+            'GMDateTo'   => $to,
+        ]));
+        return self::rows($res);
+    }
+
+    /** Hodnotenie štýlu jazdy vodiča */
+    public static function getDriverRating(int $driverId, string $from, string $to): array {
+        $res = self::call('_getDriverRating', array_merge(self::auth(), [
+            'IdDriver'   => $driverId,
+            'GMDateFrom' => $from,
+            'GMDateTo'   => $to,
         ]));
         return self::rows($res);
     }

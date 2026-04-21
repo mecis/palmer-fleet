@@ -11,7 +11,7 @@ function handleLogin(array $input): void {
     }
 
     $db = Database::connect();
-    $stmt = $db->prepare('SELECT id, meno, priezvisko, email, heslo, rola, aktivny FROM users WHERE email = ?');
+    $stmt = $db->prepare('SELECT id, meno, priezvisko, email, heslo, rola, wd_driver_id, aktivny FROM users WHERE email = ?');
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
@@ -35,20 +35,21 @@ function handleLogin(array $input): void {
     sendJSON([
         'token' => $token,
         'user' => [
-            'id' => $user['id'],
-            'meno' => $user['meno'],
-            'priezvisko' => $user['priezvisko'],
-            'email' => $user['email'],
-            'rola' => $user['rola'],
+            'id'           => $user['id'],
+            'meno'         => $user['meno'],
+            'priezvisko'   => $user['priezvisko'],
+            'email'        => $user['email'],
+            'rola'         => $user['rola'],
+            'wd_driver_id' => $user['wd_driver_id'] ? (int)$user['wd_driver_id'] : null,
         ]
     ]);
 }
 
 function handleMe(): void {
     $authUser = Auth::requireAuth();
-    
+
     $db = Database::connect();
-    $stmt = $db->prepare('SELECT id, meno, priezvisko, email, rola FROM users WHERE id = ?');
+    $stmt = $db->prepare('SELECT id, meno, priezvisko, email, rola, wd_driver_id FROM users WHERE id = ?');
     $stmt->execute([$authUser['id']]);
     $user = $stmt->fetch();
 

@@ -44,11 +44,21 @@ switch ($resource) {
     // --- VEHICLES ---
     case 'vehicles':
         require_once __DIR__ . '/api/vehicles.php';
-        if ($method === 'GET' && !$id)     getVehicles();
-        elseif ($method === 'GET' && $id)  getVehicle((int)$id);
-        elseif ($method === 'POST')        createVehicle($input);
-        elseif ($method === 'PUT' && $id)  updateVehicle((int)$id, $input);
-        elseif ($method === 'DELETE' && $id) deleteVehicle((int)$id);
+        $sub   = $segments[2] ?? '';
+        $subId = (int)($segments[3] ?? 0);
+
+        if ($method === 'GET'    && !$id && !$sub)                            getVehicles();
+        elseif ($method === 'GET'    && $id && !$sub)                         getVehicle((int)$id);
+        elseif ($method === 'POST'   && !$id)                                 createVehicle($input);
+        elseif ($method === 'PUT'    && $id && !$sub)                         updateVehicle((int)$id, $input);
+        elseif ($method === 'DELETE' && $id && !$sub)                         deleteVehicle((int)$id);
+        elseif ($method === 'GET'    && $id && $sub === 'deadlines' && !$subId) getVehicleDeadlines((int)$id);
+        elseif ($method === 'POST'   && $id && $sub === 'deadlines')          createVehicleDeadline((int)$id, $input);
+        elseif ($method === 'DELETE' && $id && $sub === 'deadlines' && $subId) deleteVehicleDeadline((int)$id, $subId);
+        elseif ($method === 'GET'    && $id && $sub === 'documents' && !$subId) getVehicleDocuments((int)$id);
+        elseif ($method === 'POST'   && $id && $sub === 'documents' && !$subId) uploadVehicleDocument((int)$id);
+        elseif ($method === 'GET'    && $id && $sub === 'documents' && $subId)  downloadVehicleDocument((int)$id, $subId);
+        elseif ($method === 'DELETE' && $id && $sub === 'documents' && $subId)  deleteVehicleDocument((int)$id, $subId);
         else sendError(405, 'Metóda nie je povolená');
         break;
 
@@ -77,6 +87,55 @@ switch ($resource) {
         else sendError(405, 'Metóda nie je povolená');
         break;
 
+    // --- VEHICLE DETAILS (ECV-based, no vehicles table dependency) ---
+    case 'vehicle-details':
+        require_once __DIR__ . '/api/vehicle-details.php';
+        $ecv   = urldecode($segments[1] ?? '');
+        $sub   = $segments[2] ?? '';
+        $subId = (int)($segments[3] ?? 0);
+
+        if (!$ecv) { sendError(400, 'EČV je povinné'); break; }
+
+        if    ($method === 'GET'    && !$sub)                                    getVehicleDetail($ecv);
+        elseif ($method === 'PUT'   && !$sub)                                    upsertVehicleDetail($ecv, $input);
+        elseif ($method === 'GET'   && $sub === 'deadlines' && !$subId)          getVehicleDeadlinesDetail($ecv);
+        elseif ($method === 'POST'  && $sub === 'deadlines')                     createVehicleDeadlineDetail($ecv, $input);
+        elseif ($method === 'PUT'   && $sub === 'deadlines' && $subId)            updateVehicleDeadlineDetail($ecv, $subId, $input);
+        elseif ($method === 'PATCH' && $sub === 'deadlines' && $subId)           updateDeadlineStav($ecv, $subId, $input);
+        elseif ($method === 'DELETE'&& $sub === 'deadlines' && $subId)           deleteVehicleDeadlineDetail($ecv, $subId);
+        elseif ($method === 'GET'   && $sub === 'documents' && !$subId)          getVehicleDocumentsDetail($ecv);
+        elseif ($method === 'POST'  && $sub === 'documents' && !$subId)          uploadVehicleDocumentDetail($ecv);
+        elseif ($method === 'GET'   && $sub === 'documents' && $subId)           downloadVehicleDocumentDetail($ecv, $subId);
+        elseif ($method === 'DELETE'&& $sub === 'documents' && $subId)           deleteVehicleDocumentDetail($ecv, $subId);
+        elseif ($method === 'GET'   && $sub === 'service' && !$subId)            getServiceRecordsDetail($ecv);
+        elseif ($method === 'POST'  && $sub === 'service' && !$subId)            createServiceRecordDetail($ecv, $input);
+        elseif ($method === 'PUT'   && $sub === 'service' && $subId)             updateServiceRecordDetail($ecv, $subId, $input);
+        elseif ($method === 'DELETE'&& $sub === 'service' && $subId)             deleteServiceRecordDetail($ecv, $subId);
+        else sendError(405, 'Metóda nie je povolená');
+        break;
+
+    // --- TRAILERS ---
+    case 'trailers':
+        require_once __DIR__ . '/api/trailers.php';
+        $ecv = urldecode($segments[1] ?? '');
+        if    ($method === 'GET'    && !$ecv)  getTrailers();
+        elseif ($method === 'POST'  && !$ecv)  createTrailer($input);
+        elseif ($method === 'PUT'   && $ecv)   updateTrailer($ecv, $input);
+        elseif ($method === 'DELETE'&& $ecv)   deleteTrailer($ecv);
+        else sendError(405, 'Metóda nie je povolená');
+        break;
+
+    // --- REMINDERS ---
+    case 'reminders':
+        require_once __DIR__ . '/api/reminders.php';
+        $remSub = $segments[1] ?? '';
+        $remId  = is_numeric($remSub) ? (int)$remSub : 0;
+        if    ($method === 'GET'   && !$remSub)                          getReminders();
+        elseif ($method === 'PATCH' && $remId)                           updateReminderStav($remId, $input);
+        elseif ($method === 'PATCH' && $remSub === 'driver')             updateDriverReminderStav((int)($segments[2] ?? 0), $input);
+        else sendError(405, 'Metóda nie je povolená');
+        break;
+
     // --- DASHBOARD ---
     case 'dashboard':
         require_once __DIR__ . '/api/dashboard.php';
@@ -94,6 +153,7 @@ switch ($resource) {
         elseif ($method === 'PUT'  && $action === 'driver')   updateDriver((int)($segments[2] ?? 0), $input);
         elseif ($method === 'GET' && $action === 'history') getPositionHistory();
         elseif ($method === 'GET' && $action === 'status')  getTrackingStatus();
+        elseif ($method === 'GET' && $action === 'wd-raw')  getWdRaw();
         else sendError(404, 'Endpoint nenájdený');
         break;
 

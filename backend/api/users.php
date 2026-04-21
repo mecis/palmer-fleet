@@ -5,15 +5,15 @@ function getUsers(): void {
     Auth::requireRole(['admin', 'dispecer', 'manazer']);
     
     $db = Database::connect();
-    $stmt = $db->query('SELECT id, meno, priezvisko, email, rola, telefon, aktivny, datum_vytvorenia FROM users ORDER BY priezvisko ASC');
+    $stmt = $db->query('SELECT id, meno, priezvisko, email, rola, wd_driver_id, telefon, aktivny, datum_vytvorenia FROM users ORDER BY priezvisko ASC');
     sendJSON($stmt->fetchAll());
 }
 
 function getUser(int $id): void {
     Auth::requireAuth();
-    
+
     $db = Database::connect();
-    $stmt = $db->prepare('SELECT id, meno, priezvisko, email, rola, telefon, aktivny, datum_vytvorenia FROM users WHERE id = ?');
+    $stmt = $db->prepare('SELECT id, meno, priezvisko, email, rola, wd_driver_id, telefon, aktivny, datum_vytvorenia FROM users WHERE id = ?');
     $stmt->execute([$id]);
     $user = $stmt->fetch();
 
@@ -59,9 +59,11 @@ function createUser(array $input): void {
         sendError(409, 'Používateľ s týmto emailom už existuje');
     }
 
+    $wdDriverId = ($rola === 'vodic' && !empty($input['wd_driver_id'])) ? (int)$input['wd_driver_id'] : null;
+
     $stmt = $db->prepare('
-        INSERT INTO users (meno, priezvisko, email, heslo, rola, telefon)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO users (meno, priezvisko, email, heslo, rola, wd_driver_id, telefon)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     ');
 
     $stmt->execute([
@@ -70,6 +72,7 @@ function createUser(array $input): void {
         $email,
         password_hash($heslo, PASSWORD_BCRYPT),
         $rola,
+        $wdDriverId,
         trim($input['telefon'] ?? '') ?: null,
     ]);
 
@@ -119,6 +122,15 @@ function updateUser(int $id, array $input): void {
         isset($input['aktivny']) ? (int)$input['aktivny'] : null,
         $id,
     ]);
+
+    // wd_driver_id: ak je rola vodič, ulož; inak vynuluj
+    if (array_key_exists('wd_driver_id', $input) || array_key_exists('rola', $input)) {
+        $finalRola = $db->prepare('SELECT rola FROM users WHERE id = ?');
+        $finalRola->execute([$id]);
+        $role = $finalRola->fetchColumn();
+        $wdId = ($role === 'vodic' && !empty($input['wd_driver_id'])) ? (int)$input['wd_driver_id'] : null;
+        $db->prepare('UPDATE users SET wd_driver_id = ? WHERE id = ?')->execute([$wdId, $id]);
+    }
 
     // Ak bolo zadané nové heslo, aktualizuj ho
     if (!empty($input['heslo']) && strlen($input['heslo']) >= 6) {

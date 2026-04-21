@@ -22,16 +22,26 @@ const EMPTY_FORM = {
   email: '',
   telefon: '',
   rola: 'vodic',
+  wd_driver_id: '',
   aktivny: 1,
   heslo: '',
 };
 
 function UserModal({ user, onClose, onSaved, isNew, isSelf }) {
   const [form, setForm] = useState(
-    isNew ? EMPTY_FORM : { ...EMPTY_FORM, ...user, heslo: '' }
+    isNew ? EMPTY_FORM : { ...EMPTY_FORM, ...user, wd_driver_id: user?.wd_driver_id || '', heslo: '' }
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [wdDrivers, setWdDrivers] = useState([]);
+
+  useEffect(() => {
+    if (form.rola === 'vodic') {
+      api.get('/tracking/drivers')
+        .then(res => setWdDrivers(res.data || []))
+        .catch(() => {});
+    }
+  }, [form.rola]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -45,6 +55,7 @@ function UserModal({ user, onClose, onSaved, isNew, isSelf }) {
     try {
       const payload = { ...form };
       if (!payload.heslo) delete payload.heslo;
+      payload.wd_driver_id = payload.rola === 'vodic' && payload.wd_driver_id ? Number(payload.wd_driver_id) : null;
       if (isNew) {
         await api.post('/users', payload);
       } else {
@@ -66,7 +77,7 @@ function UserModal({ user, onClose, onSaved, isNew, isSelf }) {
         {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
+          <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
             <div className="form-group">
               <label>Meno</label>
               <input name="meno" value={form.meno} onChange={handleChange} required />
@@ -87,7 +98,7 @@ function UserModal({ user, onClose, onSaved, isNew, isSelf }) {
             <input name="telefon" value={form.telefon || ''} onChange={handleChange} placeholder="+421 900 000 000" />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
+          <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
             <div className="form-group">
               <label>Rola</label>
               <select name="rola" value={form.rola} onChange={handleChange} disabled={isSelf}>
@@ -115,6 +126,23 @@ function UserModal({ user, onClose, onSaved, isNew, isSelf }) {
               )}
             </div>
           </div>
+
+          {form.rola === 'vodic' && (
+            <div className="form-group">
+              <label>Priradený WD vodič</label>
+              <select name="wd_driver_id" value={form.wd_driver_id || ''} onChange={handleChange}>
+                <option value="">— nevybraný —</option>
+                {wdDrivers.map(d => (
+                  <option key={d.iddriver} value={d.iddriver}>
+                    {d.jmeno} {d.prijmeni} (#{d.iddriver})
+                  </option>
+                ))}
+              </select>
+              <small style={{ color: 'var(--gray-500)', fontSize: '0.75rem' }}>
+                Prepojí účet s konkrétnym vodičom vo Webdispečink
+              </small>
+            </div>
+          )}
 
           <div className="form-group">
             <label>{isNew ? 'Heslo' : 'Nové heslo (nechajte prázdne pre zachovanie)'}</label>

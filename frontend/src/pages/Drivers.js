@@ -1,25 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-const DriverIcon = ({ size = 90 }) => (
-  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style={{ width: size, height: size }}>
-    <ellipse cx="60" cy="95" rx="38" ry="22" fill="#2563eb" />
-    <ellipse cx="60" cy="95" rx="22" ry="18" fill="#1d4ed8" />
-    <path d="M48 78 L60 90 L72 78" fill="none" stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round" />
-    <circle cx="60" cy="52" r="22" fill="#fde68a" />
-    <path d="M38 50 Q40 28 60 26 Q80 28 82 50 Z" fill="#1e40af" />
-    <rect x="36" y="49" width="48" height="5" rx="2.5" fill="#1e3a8a" />
-    <circle cx="52" cy="54" r="3" fill="#1f2937" />
-    <circle cx="68" cy="54" r="3" fill="#1f2937" />
-    <circle cx="53" cy="53" r="1" fill="white" />
-    <circle cx="69" cy="53" r="1" fill="white" />
-    <path d="M52 63 Q60 70 68 63" fill="none" stroke="#92400e" strokeWidth="2" strokeLinecap="round" />
-    <ellipse cx="26" cy="90" rx="9" ry="14" fill="#2563eb" transform="rotate(-15 26 90)" />
-    <ellipse cx="94" cy="90" rx="9" ry="14" fill="#2563eb" transform="rotate(15 94 90)" />
-    <ellipse cx="60" cy="116" rx="36" ry="5" fill="#00000015" />
-  </svg>
+const DriverIcon = () => (
+  <img src="/driver-avatar.png" alt="vodič" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
 );
+
+// "HH:MM:SS" (môže byť >24h) → "123 h 45 min"
+function formatDriveTime(str) {
+  if (!str || typeof str !== 'string') return '—';
+  const parts = str.split(':');
+  if (parts.length < 2) return str;
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  if (h === 0 && m === 0) return '0 h';
+  return `${h} h${m ? ` ${m} min` : ''}`;
+}
 
 // ─── Karta vodiča ─────────────────────────────────────────────────────────────
 
@@ -73,6 +70,10 @@ function DriverCard({ driver, onClick }) {
             <span style={{ fontSize: '0.75rem', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Stredisko</span>
             <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>{driver.stredisko || '—'}</span>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Doba jazdy</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--gray-700)' }}>{formatDriveTime(driver.total_drive_time)}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -125,7 +126,7 @@ function DriverModal({ driver, onClose, userId }) {
     setDbLoading(true);
     api.get(`/drivers/${userId}`)
       .then(r => { setDbData(r.data); setForm(r.data.details || {}); })
-      .catch(() => {})
+      .catch(err => setError(err.response?.data?.error || err.message || 'Chyba načítania'))
       .finally(() => setDbLoading(false));
   };
 
@@ -211,7 +212,7 @@ function DriverModal({ driver, onClose, userId }) {
               border: `3px solid ${driver.is_driving ? '#16a34a' : '#d1d5db'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <div style={{ width: 72, height: 72, marginTop: '-8px' }}><DriverIcon /></div>
+              <div style={{ width: '100%', height: '100%' }}><DriverIcon /></div>
             </div>
 
             {/* Meno + status */}
@@ -264,6 +265,8 @@ function DriverModal({ driver, onClose, userId }) {
                   <InfoRow label="Divízia"      value={driver.divize      || '—'} />
                   <InfoRow label="Skupina"      value={driver.groupname   || '—'} />
                   <InfoRow label="Telefón (WD)" value={driver.mobil       || '—'} />
+                  <InfoRow label="Celková doba jazdy" value={formatDriveTime(driver.total_drive_time)} />
+                  <InfoRow label="Celkom km"    value={driver.total_km != null ? `${Number(driver.total_km).toLocaleString('sk-SK', { maximumFractionDigits: 0 })} km` : '—'} />
                 </Grid2>
                 {driver.adresa && <InfoRow label="Adresa" value={<span style={{ whiteSpace: 'pre-line' }}>{driver.adresa}</span>} />}
               </Section>
@@ -351,8 +354,7 @@ function DriverModal({ driver, onClose, userId }) {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{doc.nazov}</div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)', marginTop: '0.1rem' }}>
-                      {TYP_DOC[doc.typ_dokumentu]} · {(doc.velkost / 1024).toFixed(0)} KB · {new Date(doc.datum_nahratia).toLocaleDateString('sk-SK')}
-                      {doc.datum_expiracie && <span style={{ marginLeft: '0.5rem' }}>· exp. <ExpiryBadge date={doc.datum_expiracie} /></span>}
+                      {TYP_DOC[doc.typ_dokumentu]} · {(doc.velkost / 1024).toFixed(0)} KB
                     </div>
                   </div>
                   <button
@@ -368,16 +370,11 @@ function DriverModal({ driver, onClose, userId }) {
 
               {showUpload && (
                 <form onSubmit={handleUpload} style={{ marginTop: '1rem', background: 'var(--gray-50)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
-                  <Grid2>
-                    <FG label="Typ dokumentu">
-                      <select value={upForm.typ_dokumentu} onChange={e => setUpForm(f => ({ ...f, typ_dokumentu: e.target.value }))}>
-                        {Object.entries(TYP_DOC).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
-                      </select>
-                    </FG>
-                    <FG label="Dátum expirácie">
-                      <input type="date" value={upForm.datum_expiracie} onChange={e => setUpForm(f => ({ ...f, datum_expiracie: e.target.value }))} />
-                    </FG>
-                  </Grid2>
+                  <FG label="Typ dokumentu">
+                    <select value={upForm.typ_dokumentu} onChange={e => setUpForm(f => ({ ...f, typ_dokumentu: e.target.value }))}>
+                      {Object.entries(TYP_DOC).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                  </FG>
                   <FG label="Názov (voliteľné)">
                     <input value={upForm.nazov} onChange={e => setUpForm(f => ({ ...f, nazov: e.target.value }))} placeholder="Nechajte prázdne pre názov súboru" />
                   </FG>
@@ -421,7 +418,7 @@ function Section({ title, children }) {
   );
 }
 function Grid2({ children }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem 1.5rem', marginBottom: '0.75rem' }}>{children}</div>;
+  return <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem 1.5rem', marginBottom: '0.75rem' }}>{children}</div>;
 }
 function FG({ label, children }) {
   return <div className="form-group" style={{ marginBottom: '0.5rem' }}><label style={{ fontSize: '0.8rem' }}>{label}</label>{children}</div>;
@@ -447,15 +444,25 @@ function InfoRow({ label, value }) {
 // ─── Stránka vodičov ──────────────────────────────────────────────────────────
 
 function Drivers() {
+  const { user } = useAuth();
+  const isVodic = user?.rola === 'vodic';
   const [drivers, setDrivers]         = useState([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState('');
   const [selected, setSelected]       = useState(null);
-  const [showNoVehicle, setShowNoVehicle] = useState(false);
+  const [showNoVehicle, setShowNoVehicle] = useState(isVodic);
+  const location = useLocation();
 
   useEffect(() => {
     api.get('/tracking/drivers')
-      .then(res => setDrivers(res.data))
+      .then(res => {
+        setDrivers(res.data);
+        const openId = location.state?.openDriverId;
+        if (openId) {
+          const match = res.data.find(d => String(d.iddriver) === String(openId));
+          if (match) setSelected(match);
+        }
+      })
       .catch(() => setError('Nepodarilo sa načítať vodičov'))
       .finally(() => setLoading(false));
   }, []);
