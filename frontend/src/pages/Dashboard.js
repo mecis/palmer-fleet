@@ -142,7 +142,7 @@ function Dashboard() {
 
   const [vehicles, setVehicles]   = useState([]);
   const [drivers, setDrivers]     = useState([]);
-  const [reminders, setReminders] = useState({ vehicles: [] });
+  const [reminders, setReminders] = useState({ vehicles: [], drivers: [] });
   const [servisy, setServisy]     = useState([]);
   const [dokumenty, setDokumenty] = useState([]);
   const [loading, setLoading]     = useState(true);
@@ -177,7 +177,12 @@ function Dashboard() {
   const upcoming = [...vehRem]
     .filter(r => r.dni <= 30)
     .sort((a, b) => new Date(a.datum_expiracie) - new Date(b.datum_expiracie))
-    .slice(0, 20);
+    .slice(0, 5);
+
+  const drvRem = reminders.drivers || [];
+  const upcomingDrivers = [...drvRem]
+    .sort((a, b) => new Date(a.datum_expiracie) - new Date(b.datum_expiracie))
+    .slice(0, 5);
 
   // Top 5 drivers (by total drive time)
   const topDrivers = [...drivers]
@@ -248,13 +253,16 @@ function Dashboard() {
       {/* ─── SECTION 2: Deadlines + Top drivers ─────────────────────── */}
       <div className="dash-section">
         <div className="dash-section-title">Termíny a vodiči</div>
-        <div className="dash-two-col" style={canSeeReminders ? undefined : { gridTemplateColumns: '520px' }}>
+        <div
+          className={canSeeReminders ? 'dash-three-col' : 'dash-two-col'}
+          style={canSeeReminders ? undefined : { gridTemplateColumns: '520px' }}
+        >
 
           {canSeeReminders && (
             <div className="dash-card dash-table-card">
               <div className="dash-card-header">
-                <h2>Nadchádzajúce termíny</h2>
-                <span className="dash-badge">{loading ? '—' : upcoming.length}</span>
+                <h2>Najbližšie termíny</h2>
+                <span className="dash-badge">{loading ? '—' : `Top ${upcoming.length}`}</span>
               </div>
               <div style={{ overflowX: 'auto' }}>
                 <table className="dash-table">
@@ -268,11 +276,10 @@ function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {upcoming.length === 0 ? (
-                      <tr><td colSpan="5" className="dash-empty">
-                        {loading ? 'Načítavam…' : 'Žiadne termíny'}
-                      </td></tr>
-                    ) : upcoming.map(r => {
+                    {upcoming.length === 0 && !loading && (
+                      <tr><td colSpan="5" className="dash-empty">Žiadne termíny</td></tr>
+                    )}
+                    {upcoming.map(r => {
                       const s = rowState(r.dni);
                       const zosText = r.dni < 0 ? `−${Math.abs(r.dni)} dní` : `${r.dni} dní`;
                       return (
@@ -285,6 +292,52 @@ function Dashboard() {
                         </tr>
                       );
                     })}
+                    {Array.from({ length: Math.max(0, 5 - upcoming.length) }).map((_, i) => (
+                      <tr key={`pad-${i}`} className="dash-row-pad"><td colSpan="5">&nbsp;</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {canSeeReminders && (
+            <div className="dash-card dash-table-card">
+              <div className="dash-card-header">
+                <h2>Termíny vodičov</h2>
+                <span className="dash-badge">{loading ? '—' : `Top ${upcomingDrivers.length}`}</span>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="dash-table">
+                  <thead>
+                    <tr>
+                      <th>Vodič</th>
+                      <th>Typ</th>
+                      <th>Dátum expirácie</th>
+                      <th>Zostatok dní</th>
+                      <th>Stav</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {upcomingDrivers.length === 0 && !loading && (
+                      <tr><td colSpan="5" className="dash-empty">Žiadne termíny</td></tr>
+                    )}
+                    {upcomingDrivers.map(r => {
+                      const s = rowState(r.dni);
+                      const zosText = r.dni < 0 ? `−${Math.abs(r.dni)} dní` : `${r.dni} dní`;
+                      return (
+                        <tr key={`${r.wd_driver_id}-${r.stav_field}`} className={s.row}>
+                          <td><span className="dash-driver-cell">{r.meno}</span></td>
+                          <td><span className={`dash-typ-badge ${typBadgeClass(r.typ)}`}>{r.typ}</span></td>
+                          <td>{formatDate(r.datum_expiracie)}</td>
+                          <td><span className={`dash-zostatok ${s.zos}`}>{zosText}</span></td>
+                          <td><span className={`dash-stav-badge ${s.stav}`}>{s.label}</span></td>
+                        </tr>
+                      );
+                    })}
+                    {Array.from({ length: Math.max(0, 5 - upcomingDrivers.length) }).map((_, i) => (
+                      <tr key={`pad-${i}`} className="dash-row-pad"><td colSpan="5">&nbsp;</td></tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
