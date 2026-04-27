@@ -117,10 +117,10 @@ const PAGE_TITLES = {
   '/':             'Dashboard',
   '/vozidla':      'Vozidlá',
   '/vodici':       'Vodiči',
+  '/cmr':          'CMR',
   '/upomienky':    'Upomienky',
   '/pouzivatelia': 'Používatelia',
   '/system-log':   'Systémový log',
-  '/wd-debug':     'WD Debug',
 };
 
 function Layout() {
@@ -137,15 +137,15 @@ function Layout() {
 
   const navLinks = (
     <>
-      <NavLink to="/" end>Dashboard</NavLink>
+      <NavLink to="/" end>{isVodic ? 'Domov' : 'Dashboard'}</NavLink>
       <NavLink to="/vozidla">Vozidlá</NavLink>
       <NavLink to="/vodici">Vodiči</NavLink>
+      <NavLink to="/cmr">CMR</NavLink>
       {!isVodic && <NavLink to="/upomienky">Upomienky</NavLink>}
       {(user?.rola === 'admin' || user?.rola === 'dispecer' || user?.rola === 'manazer') && (
         <NavLink to="/pouzivatelia">Používatelia</NavLink>
       )}
       {user?.rola === 'admin' && <NavLink to="/system-log">Systémový log</NavLink>}
-      {user?.rola === 'admin' && <NavLink to="/wd-debug">WD Debug</NavLink>}
     </>
   );
 

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-// ─── Truck icon ───────────────────────────────────────────────────────────────
+// ikonka tahaca - SVG inline aby som nemusel pchat ext lib
 
 const TruckIcon = () => (
   <svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
@@ -62,7 +62,7 @@ const TrailerIcon = () => (
   </svg>
 );
 
-// ─── Karta vozidla ────────────────────────────────────────────────────────────
+// jedna karta vozidla v zozname
 
 function VehicleCard({ vehicle, onClick }) {
   const speed     = Number(vehicle.speed);
@@ -142,7 +142,7 @@ function VehicleCard({ vehicle, onClick }) {
   );
 }
 
-// ─── Pomocné komponenty ───────────────────────────────────────────────────────
+// male pomocne komponenty pouzite vsade
 
 function Section({ title, children }) {
   return (
@@ -227,12 +227,13 @@ function StavSelect({ stav, stavManual, onChangeStav, canEdit }) {
   );
 }
 
-// ─── Modal detailu vozidla ────────────────────────────────────────────────────
+// modal s tabmi: info / terminy / servis / dokumenty
 
 function VehicleModal({ vehicle, trailers = [], onClose }) {
   const { user: currentUser } = useAuth();
   const canEdit = ['admin', 'dispecer', 'manazer'].includes(currentUser?.rola);
   const isAdmin = currentUser?.rola === 'admin';
+  const isVodic = currentUser?.rola === 'vodic';
 
   const spz        = vehicle.identifikator || vehicle.carid;
   const speed      = Number(vehicle.speed);
@@ -281,6 +282,15 @@ function VehicleModal({ vehicle, trailers = [], onClose }) {
   const [uploading, setUploading]   = useState(false);
   const fileRef = useRef(null);
 
+  // CMR pre toto vozidlo
+  const [cmrList, setCmrList]       = useState([]);
+  const [showAddCmr, setShowAddCmr] = useState(false);
+  const [cmrForm, setCmrForm]       = useState({
+    cislo_cmr: '', datum_prepravy: new Date().toISOString().slice(0, 10), poznamka: '',
+  });
+  const [cmrUploading, setCmrUploading] = useState(false);
+  const cmrFileRef = useRef(null);
+
   const BASE = `/vehicle-details/${encodeURIComponent(spz)}`;
 
   const loadAll = () => {
@@ -300,6 +310,56 @@ function VehicleModal({ vehicle, trailers = [], onClose }) {
   };
 
   useEffect(() => { loadAll(); }, [spz]);
+
+  // CMR sa lazy-loaduje az pri otvoreni tabu
+  useEffect(() => {
+    if (tab !== 'cmr') return;
+    api.get('/cmr', { params: { ecv: spz } })
+      .then(r => setCmrList(r.data))
+      .catch(() => {});
+  }, [tab, spz]);
+
+  const cmrCanUpload = isVodic || isAdmin;
+
+  const handleAddCmr = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!cmrFileRef.current?.files[0]) { setError('Vyber súbor'); return; }
+    const data = new FormData();
+    data.append('file', cmrFileRef.current.files[0]);
+    data.append('ecv', spz);
+    data.append('cislo_cmr', cmrForm.cislo_cmr);
+    data.append('datum_prepravy', cmrForm.datum_prepravy);
+    data.append('poznamka', cmrForm.poznamka);
+
+    setCmrUploading(true);
+    try {
+      await api.post('/cmr', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setShowAddCmr(false);
+      setCmrForm({ cislo_cmr: '', datum_prepravy: new Date().toISOString().slice(0, 10), poznamka: '' });
+      api.get('/cmr', { params: { ecv: spz } }).then(r => setCmrList(r.data));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Chyba pri nahrávaní');
+    } finally { setCmrUploading(false); }
+  };
+
+  const handleDownloadCmr = async (cmrId, nazov) => {
+    try {
+      const res = await api.get(`/cmr/${cmrId}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = nazov; a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
+  };
+
+  const handleDeleteCmr = async (cmrId) => {
+    if (!window.confirm('Zmazať tento CMR?')) return;
+    try {
+      await api.delete(`/cmr/${cmrId}`);
+      setCmrList(l => l.filter(c => c.id !== cmrId));
+    } catch {}
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -502,7 +562,10 @@ function VehicleModal({ vehicle, trailers = [], onClose }) {
           </div>
 
           <div style={{ display: 'flex', gap: '0.25rem', paddingLeft: '1.5rem' }}>
-            {[['info','Informácie'],['deadlines','Termíny'],['service','Servis'],['docs','Dokumenty']].map(([k,l]) => (
+            {(isVodic
+              ? [['info','Informácie'],['docs','Dokumenty'],['cmr','CMR']]
+              : [['info','Informácie'],['deadlines','Termíny'],['service','Servis'],['docs','Dokumenty'],['cmr','CMR']]
+            ).map(([k,l]) => (
               <button key={k} style={tabStyle(tab === k)} onClick={() => { setTab(k); setMode('view'); setError(''); setSuccess(''); }}>{l}</button>
             ))}
           </div>
@@ -515,7 +578,7 @@ function VehicleModal({ vehicle, trailers = [], onClose }) {
 
           {loading ? <div style={{ color: 'var(--gray-400)', fontSize: '0.9rem' }}>Načítavam...</div> : (
             <>
-              {/* ── TAB: Informácie ── */}
+              {/* tab: info */}
               {tab === 'info' && mode === 'view' && (
                 <>
                   <Section title="Z Webdispečink">
@@ -621,7 +684,7 @@ function VehicleModal({ vehicle, trailers = [], onClose }) {
                 </form>
               )}
 
-              {/* ── TAB: Termíny ── */}
+              {/* tab: terminy */}
               {tab === 'deadlines' && (
                 <>
                   {deadlines.length === 0 && !showAddDl && (
@@ -697,7 +760,7 @@ function VehicleModal({ vehicle, trailers = [], onClose }) {
                 </>
               )}
 
-              {/* ── TAB: Servis ── */}
+              {/* tab: servis */}
               {tab === 'service' && (
                 <>
                   {service.length === 0 && !showAddSv && (
@@ -799,7 +862,7 @@ function VehicleModal({ vehicle, trailers = [], onClose }) {
                 </>
               )}
 
-              {/* ── TAB: Dokumenty ── */}
+              {/* tab: dokumenty */}
               {tab === 'docs' && (
                 <>
                   {docs.length === 0 && !showUpload && (
@@ -847,6 +910,69 @@ function VehicleModal({ vehicle, trailers = [], onClose }) {
                   )}
                 </>
               )}
+
+              {/* tab: cmr */}
+              {tab === 'cmr' && (
+                <>
+                  {cmrList.length === 0 && !showAddCmr && (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-400)' }}>Žiadne CMR pre toto vozidlo</div>
+                  )}
+                  {cmrList.map(c => (
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.5rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                          {c.cislo_cmr || c.nazov}
+                          {c.datum_prepravy && (
+                            <span style={{ marginLeft: '0.5rem', fontWeight: 400, color: 'var(--gray-500)' }}>
+                              · {new Date(c.datum_prepravy).toLocaleDateString('sk-SK')}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)', marginTop: '0.15rem' }}>
+                          {c.nahral_meno ? `${c.nahral_meno} ${c.nahral_priezvisko}` : '—'}
+                          {c.poznamka && <span> · {c.poznamka}</span>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDownloadCmr(c.id, c.nazov)}
+                        style={{ fontSize: '0.8rem', color: 'var(--primary)', background: 'none', padding: '0.3rem 0.6rem', border: '1px solid var(--primary)', borderRadius: '6px', cursor: 'pointer' }}
+                      >Stiahnuť</button>
+                      {isAdmin && (
+                        <button onClick={() => handleDeleteCmr(c.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '1.1rem' }}>×</button>
+                      )}
+                    </div>
+                  ))}
+
+                  {showAddCmr && (
+                    <form onSubmit={handleAddCmr} style={{ marginTop: '1rem', background: 'var(--gray-50)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--gray-500)', marginBottom: '0.5rem' }}>
+                        Vozidlo: <strong>{spz}</strong>
+                      </div>
+                      <Grid2>
+                        <FG label="Číslo CMR">
+                          <input value={cmrForm.cislo_cmr} onChange={e => setCmrForm(f => ({ ...f, cislo_cmr: e.target.value }))} placeholder="napr. SK-2026-0042" />
+                        </FG>
+                        <FG label="Dátum prepravy">
+                          <input type="date" value={cmrForm.datum_prepravy} onChange={e => setCmrForm(f => ({ ...f, datum_prepravy: e.target.value }))} />
+                        </FG>
+                      </Grid2>
+                      <FG label="Poznámka">
+                        <input value={cmrForm.poznamka} onChange={e => setCmrForm(f => ({ ...f, poznamka: e.target.value }))} placeholder="napr. nakládka BA → vykládka Wien" />
+                      </FG>
+                      <FG label="Súbor (PDF / JPG / PNG, max 10 MB) *">
+                        <input type="file" ref={cmrFileRef} accept=".pdf,.jpg,.jpeg,.png,.webp" required />
+                      </FG>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <button type="button" className="btn btn-secondary" onClick={() => setShowAddCmr(false)}>Zrušiť</button>
+                        <button type="submit" className="btn btn-primary" disabled={cmrUploading}>{cmrUploading ? 'Nahrávam...' : 'Nahrať CMR'}</button>
+                      </div>
+                    </form>
+                  )}
+                  {cmrCanUpload && !showAddCmr && (
+                    <button className="btn btn-secondary" style={{ marginTop: '0.75rem' }} onClick={() => setShowAddCmr(true)}>+ Nahrať CMR</button>
+                  )}
+                </>
+              )}
             </>
           )}
         </div>
@@ -863,7 +989,7 @@ function VehicleModal({ vehicle, trailers = [], onClose }) {
   );
 }
 
-// ─── Karta návesu ────────────────────────────────────────────────────────────
+// karta navesu (fialova varianta)
 
 function TrailerCard({ trailer, onClick }) {
   return (
@@ -907,7 +1033,7 @@ function TrailerCard({ trailer, onClick }) {
   );
 }
 
-// ─── Modal návesu ─────────────────────────────────────────────────────────────
+// modal pre naves - podobny ako VehicleModal len bez WD veci
 
 function TrailerModal({ trailer, onClose, onSaved, onDeleted }) {
   const { user: currentUser } = useAuth();
@@ -1165,7 +1291,7 @@ function TrailerModal({ trailer, onClose, onSaved, onDeleted }) {
           {error   && <div className="alert alert-error"   style={{ marginBottom: '1rem' }}>{error}</div>}
           {success && <div className="alert alert-success" style={{ marginBottom: '1rem' }}>{success}</div>}
 
-          {/* ── Create mode ── */}
+          {/* vytvaranie noveho navesu */}
           {isCreate && (
             <form onSubmit={handleCreate}>
               <Section title="Základné údaje">{evidenciaForm(true)}</Section>
@@ -1173,7 +1299,7 @@ function TrailerModal({ trailer, onClose, onSaved, onDeleted }) {
             </form>
           )}
 
-          {/* ── TAB: Informácie ── */}
+          {/* tab: info */}
           {!isCreate && tab === 'info' && mode === 'view' && (
             <>
               <Section title="Evidencia">
@@ -1195,7 +1321,7 @@ function TrailerModal({ trailer, onClose, onSaved, onDeleted }) {
             </form>
           )}
 
-          {/* ── TAB: Termíny ── */}
+          {/* tab: terminy */}
           {!isCreate && tab === 'deadlines' && (
             <>
               {dlLoading ? <div style={{ color: 'var(--gray-400)' }}>Načítavam...</div> : (
@@ -1250,7 +1376,7 @@ function TrailerModal({ trailer, onClose, onSaved, onDeleted }) {
             </>
           )}
 
-          {/* ── TAB: Servis ── */}
+          {/* tab: servis */}
           {!isCreate && tab === 'service' && (
             <>
               {dlLoading ? <div style={{ color: 'var(--gray-400)' }}>Načítavam...</div> : (
@@ -1319,7 +1445,7 @@ function TrailerModal({ trailer, onClose, onSaved, onDeleted }) {
             </>
           )}
 
-          {/* ── TAB: Dokumenty ── */}
+          {/* tab: dokumenty */}
           {!isCreate && tab === 'docs' && (
             <>
               {dlLoading ? <div style={{ color: 'var(--gray-400)' }}>Načítavam...</div> : (
@@ -1370,7 +1496,7 @@ function TrailerModal({ trailer, onClose, onSaved, onDeleted }) {
   );
 }
 
-// ─── Stránka vozidiel ─────────────────────────────────────────────────────────
+// hlavna stranka /vozidla
 
 function Vehicles() {
   const { user: currentUser } = useAuth();
@@ -1432,7 +1558,7 @@ function Vehicles() {
         ))}
       </div>
 
-      {/* ─── Návesy ─────────────────────────────────────────────────────── */}
+      {/* sekcia navesov */}
       <div style={{ marginTop: '2.5rem' }}>
         <div className="page-header" style={{ marginBottom: '1rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Návesy</h2>

@@ -3,22 +3,23 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-// ── Labels ──────────────────────────────────────────────────────────────────
-
 const SERVIS_LABELS = {
-  oprava: 'Oprava', udrzba: 'Údržba', pneu: 'Pneumatiky',
-  olej: 'Výmena oleja', brzdy: 'Brzdy', ine: 'Iné',
+  oprava: 'Oprava',
+  udrzba: 'Údržba',
+  pneu: 'Pneumatiky',
+  olej: 'Výmena oleja',
+  brzdy: 'Brzdy',
+  ine: 'Iné',
 };
+
 const DOC_LABELS = {
   obciansky_preukaz: 'Občiansky preukaz',
-  poistka_vodica:    'Poistka vodiča',
-  pracovna_zmluva:   'Pracovná zmluva',
-  certifikat_a1:     'Certifikát A1',
-  psychotest:        'Psychotest',
-  ine:               'Iné',
+  poistka_vodica: 'Poistka vodiča',
+  pracovna_zmluva: 'Pracovná zmluva',
+  certifikat_a1: 'Certifikát A1',
+  psychotest: 'Psychotest',
+  ine: 'Iné',
 };
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatDate(d) {
   if (!d) return '—';
@@ -31,13 +32,14 @@ function initials(meno, priezvisko) {
   return `${(meno?.[0] || '').toUpperCase()}${(priezvisko?.[0] || '').toUpperCase()}` || '?';
 }
 
-// "HH:MM:SS" → seconds
+// "HH:MM:SS" -> sekundy (moze byt aj viac ako 24h)
 function driveTimeSeconds(str) {
   if (!str || typeof str !== 'string') return 0;
   const [h, m, s] = str.split(':').map(n => parseInt(n, 10) || 0);
   return h * 3600 + m * 60 + (s || 0);
 }
-// "HH:MM:SS" → "123 h 45 min"
+
+// "HH:MM:SS" -> "123 h 45 min"
 function formatDriveTime(str) {
   if (!str || typeof str !== 'string') return '—';
   const parts = str.split(':');
@@ -50,10 +52,10 @@ function formatDriveTime(str) {
 
 function typBadgeClass(typ) {
   const t = (typ || '').toLowerCase();
-  if (t.includes('stk'))        return 'dash-typ-stk';
+  if (t.includes('stk')) return 'dash-typ-stk';
   if (t.includes('emis') || t === 'ek') return 'dash-typ-ek';
-  if (t.includes('poist'))      return 'dash-typ-poistenie';
-  if (t.includes('tacho'))      return 'dash-typ-tachograf';
+  if (t.includes('poist')) return 'dash-typ-poistenie';
+  if (t.includes('tacho')) return 'dash-typ-tachograf';
   return 'dash-typ-other';
 }
 
@@ -64,17 +66,15 @@ function fileType(mime, nazov) {
   return 'PDF';
 }
 
-// ── Row state (design thresholds) ───────────────────────────────────────────
-
+// vraciam farebny stav podla poctu dni do expiracie
 function rowState(dni) {
-  if (dni < 0)   return { row: 'row-danger',  zos: 'danger',  stav: 'dash-stav-expired', label: 'Expiroval' };
-  if (dni <= 7)  return { row: 'row-amber',   zos: 'amber',   stav: 'dash-stav-brzy',    label: 'Čoskoro' };
-  if (dni <= 30) return { row: 'row-warning', zos: 'warning', stav: 'dash-stav-brzy',    label: 'Blíži sa' };
+  if (dni < 0) return { row: 'row-danger', zos: 'danger', stav: 'dash-stav-expired', label: 'Expiroval' };
+  if (dni <= 7) return { row: 'row-amber', zos: 'amber', stav: 'dash-stav-brzy', label: 'Čoskoro' };
+  if (dni <= 30) return { row: 'row-warning', zos: 'warning', stav: 'dash-stav-brzy', label: 'Blíži sa' };
   return { row: '', zos: '', stav: 'dash-stav-ok', label: 'V poriadku' };
 }
 
-// ── Icons (from design) ─────────────────────────────────────────────────────
-
+// ikony (inline SVG, jednoduchsie ako lib)
 const IconTruck = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
     <rect x="1" y="3" width="15" height="13" rx="2" /><path d="M16 8h4l3 5v3h-7V8z" />
@@ -114,8 +114,6 @@ const IconJpg = () => (
   </svg>
 );
 
-// ── Stat card ───────────────────────────────────────────────────────────────
-
 function StatCard({ variant, icon, label, value, sub, to }) {
   const Tag = to ? Link : 'div';
   const props = to ? { to } : {};
@@ -129,23 +127,20 @@ function StatCard({ variant, icon, label, value, sub, to }) {
   );
 }
 
-// ── Avatar palette ──────────────────────────────────────────────────────────
-
+// pastelova paleta na avatary 1-5 v zozname top vodicov
 const AVATAR_BG = ['#dbeafe', '#dcfce7', '#f3e8ff', '#ffedd5', '#fce7f3'];
 const AVATAR_FG = ['#1d4ed8', '#15803d', '#7e22ce', '#c2410c', '#9d174d'];
-
-// ── Dashboard ───────────────────────────────────────────────────────────────
 
 function Dashboard() {
   const { user } = useAuth();
   const canSeeReminders = ['admin', 'dispecer', 'manazer'].includes(user?.rola);
 
-  const [vehicles, setVehicles]   = useState([]);
-  const [drivers, setDrivers]     = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [reminders, setReminders] = useState({ vehicles: [], drivers: [] });
-  const [servisy, setServisy]     = useState([]);
+  const [servisy, setServisy] = useState([]);
   const [dokumenty, setDokumenty] = useState([]);
-  const [loading, setLoading]     = useState(true);
+  const [loading, setLoading] = useState(true);
   const [updatedAt, setUpdatedAt] = useState(null);
 
   useEffect(() => {
@@ -166,32 +161,33 @@ function Dashboard() {
     });
   }, [canSeeReminders]);
 
-  // Stats
-  const totalVehicles  = vehicles.length;
+  // pocty pre statisticke karty
+  const totalVehicles = vehicles.length;
   const driversDriving = drivers.filter(d => d.is_driving).length;
-  const vehRem         = reminders.vehicles || [];
-  const expiringSoon   = vehRem.filter(r => r.dni >= 0 && r.dni <= 30).length;
-  const pastDue        = vehRem.filter(r => r.dni < 0).length;
+  const vehRem = reminders.vehicles || [];
+  const expiringSoon = vehRem.filter(r => r.dni >= 0 && r.dni <= 30).length;
+  const pastDue = vehRem.filter(r => r.dni < 0).length;
 
-  // Upcoming deadlines (past + next 30 days)
+  // top 5 najblizsie expirujucich terminov vozidiel (vratane uz expirovanych)
   const upcoming = [...vehRem]
     .filter(r => r.dni <= 30)
     .sort((a, b) => new Date(a.datum_expiracie) - new Date(b.datum_expiracie))
     .slice(0, 5);
 
+  // u vodicov nepouzivam 30-dnovy filter, lebo psychotesty su platne na roky
   const drvRem = reminders.drivers || [];
   const upcomingDrivers = [...drvRem]
     .sort((a, b) => new Date(a.datum_expiracie) - new Date(b.datum_expiracie))
     .slice(0, 5);
 
-  // Top 5 drivers (by total drive time)
+  // top 5 vodicov podla doby jazdy (najazdene hodiny)
   const topDrivers = [...drivers]
     .filter(d => driveTimeSeconds(d.total_drive_time) > 0)
     .sort((a, b) => driveTimeSeconds(b.total_drive_time) - driveTimeSeconds(a.total_drive_time))
     .slice(0, 5);
   const maxSec = driveTimeSeconds(topDrivers[0]?.total_drive_time) || 1;
 
-  // Driver map for docs
+  // mapa vodicov na zobrazenie mena pri dokumentoch
   const driverMap = {};
   drivers.forEach(d => { driverMap[d.iddriver] = d; });
 
@@ -208,7 +204,7 @@ function Dashboard() {
         <span className="dash-subtitle">{subtitle}</span>
       </div>
 
-      {/* ─── SECTION 1: Stat cards ─────────────────────────────────── */}
+      {/* statisticke karty */}
       <div className="dash-section">
         <div className="dash-stat-grid">
           <StatCard
@@ -250,7 +246,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* ─── SECTION 2: Deadlines + Top drivers ─────────────────────── */}
+      {/* terminy + top vodici */}
       <div className="dash-section">
         <div className="dash-section-title">Termíny a vodiči</div>
         <div
@@ -378,7 +374,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* ─── SECTION 3: Service + Documents ─────────────────────────── */}
+      {/* servisne zaznamy + dokumenty */}
       <div className="dash-section">
         <div className="dash-section-title">Servis a dokumenty</div>
         <div className="dash-two-col-equal">

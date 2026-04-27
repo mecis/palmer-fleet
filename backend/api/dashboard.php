@@ -1,24 +1,24 @@
 <?php
-// Palmer Fleet - Dashboard API
+// data pre dashboard - tahane queries naraz, frontend si to roztriedi
 
 function getDashboard(): void {
     Auth::requireAuth();
 
     $db = Database::connect();
 
-    // Posledné 4 servisné záznamy
-    $posledneServisy = $db->query("
+    // posledne servisne zaznamy
+    $servisy = $db->query("
         SELECT s.id, s.typ_ukonu, s.popis, s.datum_ukonu, s.ecv,
                COALESCE(d.znacka, '') AS znacka,
-               COALESCE(d.model, '')  AS model
+               COALESCE(d.model, '') AS model
         FROM service_records s
         LEFT JOIN vehicle_details d ON d.ecv = s.ecv
         ORDER BY s.datum_ukonu DESC, s.id DESC
         LIMIT 4
     ")->fetchAll();
 
-    // Posledné 4 nahrané dokumenty vodičov
-    $posledneDokumenty = $db->query("
+    // posledne nahrane dokumenty vodicov
+    $dokumenty = $db->query("
         SELECT id, wd_driver_id, nazov, typ_dokumentu, mime_type, velkost, created_at
         FROM driver_documents
         ORDER BY created_at DESC, id DESC
@@ -26,7 +26,7 @@ function getDashboard(): void {
     ")->fetchAll();
 
     sendJSON([
-        'posledne_servisy'           => $posledneServisy,
-        'posledne_dokumenty_vodicov' => $posledneDokumenty,
+        'posledne_servisy' => $servisy,
+        'posledne_dokumenty_vodicov' => $dokumenty,
     ]);
 }

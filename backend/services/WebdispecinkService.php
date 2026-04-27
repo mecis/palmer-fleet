@@ -1,5 +1,5 @@
 <?php
-// Webdispatching SOAP klient (bez php-soap, využíva cURL + raw XML)
+// SOAP klient pre Webdispecink. Bez php-soap, robim si XML rucne cez cURL.
 
 require_once __DIR__ . '/../config/webdispecink.php';
 
@@ -8,21 +8,16 @@ class WebdispecinkService {
     private const ENDPOINT  = 'https://api.webdispecink.cz/code/WebDispecinkServiceNet.php';
     private const NAMESPACE = 'urn://api.webdispecink.cz/webdisser_02';
 
-    // ------------------------------------------------------------------ //
-    //  Verejné metódy
-    // ------------------------------------------------------------------ //
-
     public static function testLogin(): bool {
         try {
             $res = self::call('_login', self::auth());
-            // call() vracia obsah <return> — pre _login je to '1' (ok) alebo '0' (fail)
+            // _login vracia '1' alebo '0'
             return trim($res ?? '') === '1';
         } catch (Exception $e) {
             return false;
         }
     }
 
-    /** Aktuálne polohy všetkých vozidiel */
     public static function getAllPositions(bool $geocode = false): array {
         $res = self::call('_getAllCarsPosition', array_merge(self::auth(), [
             'geocode' => $geocode ? 1 : 0,
@@ -30,7 +25,6 @@ class WebdispecinkService {
         return self::rows($res);
     }
 
-    /** Zoznam vozidiel */
     public static function getCarsList(): array {
         $res = self::call('_getCarsList2', array_merge(self::auth(), [
             'activeOnly' => 0,
@@ -38,29 +32,28 @@ class WebdispecinkService {
         return self::rows($res);
     }
 
-    /** História polôh vozidla (časy v UTC: "YYYY-MM-DD HH:MM:SS") */
+    // historia poloh, casy v UTC
     public static function getTimePositions(int $carId, string $from, string $to): array {
         $res = self::call('_getTimePositions2', array_merge(self::auth(), [
-            'IdCar'      => $carId,
+            'IdCar' => $carId,
             'GMDateFrom' => $from,
-            'GMDateTo'   => $to,
+            'GMDateTo' => $to,
         ]));
         return self::rows($res);
     }
 
-    /** Aktualizácia vodiča */
     public static function updateDriver(int $driverId, array $data): bool {
         $res = self::call('_updateDriver', array_merge(self::auth(), [
-            'iddriver'   => $driverId,
-            'r_jmeno'    => $data['jmeno']    ?? '',
+            'iddriver' => $driverId,
+            'r_jmeno' => $data['jmeno'] ?? '',
             'r_prijmeni' => $data['prijmeni'] ?? '',
-            'mobil'      => $data['mobil']    ?? '',
-            'dallas'     => $data['dallas']   ?? '',
+            'mobil' => $data['mobil'] ?? '',
+            'dallas' => $data['dallas'] ?? '',
         ]));
         return trim($res ?? '') === '1';
     }
 
-    /** Zoznam príves (správna metóda) */
+    // pozor, _getTrailer2 nie _getTrailers
     public static function getTrailersList(): array {
         $res = self::call('_getTrailer2', array_merge(self::auth(), [
             'activeOnly' => 0,
@@ -68,7 +61,6 @@ class WebdispecinkService {
         return self::rows($res);
     }
 
-    /** Zoznam vodičov */
     public static function getDriversList(bool $includeDisabled = false): array {
         $res = self::call('_getDriversList', array_merge(self::auth(), [
             'disabled' => $includeDisabled ? 1 : 0,
@@ -76,19 +68,16 @@ class WebdispecinkService {
         return self::rows($res);
     }
 
-    /** Rozšírený zoznam vodičov */
     public static function getDriversList2(): array {
         $res = self::call('_getDriversList2', self::auth());
         return self::rows($res);
     }
 
-    /** Skupiny vozidiel */
     public static function getCarGroups(): array {
         $res = self::call('_getCargroups', self::auth());
         return self::rows($res);
     }
 
-    /** Atribúty vozidla (značka, model, VIN, ...) */
     public static function getCarAtribut(int $carId): array {
         $res = self::call('_getCarAtribut2', array_merge(self::auth(), [
             'IdCar' => $carId,
@@ -96,7 +85,6 @@ class WebdispecinkService {
         return self::rows($res);
     }
 
-    /** Aktívne výstrahy kontrolky */
     public static function getWarningLightsActive(int $carId): array {
         $res = self::call('_getWarningLightsActive', array_merge(self::auth(), [
             'IdCar' => $carId,
@@ -104,95 +92,81 @@ class WebdispecinkService {
         return self::rows($res);
     }
 
-    /** História výstrah kontroliek */
     public static function getWarningLightsHistory(int $carId, string $from, string $to): array {
         $res = self::call('_getWarningLightsHistory', array_merge(self::auth(), [
-            'IdCar'      => $carId,
+            'IdCar' => $carId,
             'GMDateFrom' => $from,
-            'GMDateTo'   => $to,
+            'GMDateTo' => $to,
         ]));
         return self::rows($res);
     }
 
-    /** Palivové karty */
     public static function getFuelCards(): array {
         $res = self::call('_getFuelCards', self::auth());
         return self::rows($res);
     }
 
-    /** Kniha jázd */
     public static function getCarLogBook(int $carId, string $from, string $to): array {
         $res = self::call('_getCarLogBook', array_merge(self::auth(), [
-            'IdCar'      => $carId,
+            'IdCar' => $carId,
             'GMDateFrom' => $from,
-            'GMDateTo'   => $to,
+            'GMDateTo' => $to,
         ]));
         return self::rows($res);
     }
 
-    /** Prekročenie rýchlosti */
     public static function getCarOverSpeed(int $carId, string $from, string $to): array {
         $res = self::call('_getCarOverSpeed', array_merge(self::auth(), [
-            'IdCar'      => $carId,
+            'IdCar' => $carId,
             'GMDateFrom' => $from,
-            'GMDateTo'   => $to,
+            'GMDateTo' => $to,
         ]));
         return self::rows($res);
     }
 
-    /** Hraničné priechody */
     public static function getBorderCrossing(int $carId, string $from, string $to): array {
         $res = self::call('_getBorderCrossing', array_merge(self::auth(), [
-            'IdCar'      => $carId,
+            'IdCar' => $carId,
             'GMDateFrom' => $from,
-            'GMDateTo'   => $to,
+            'GMDateTo' => $to,
         ]));
         return self::rows($res);
     }
 
-    /** Štatistiky vodičov */
     public static function getStaDrivers(string $from, string $to): array {
         $res = self::call('_getStaDrivers', array_merge(self::auth(), [
             'GMDateFrom' => $from,
-            'GMDateTo'   => $to,
+            'GMDateTo' => $to,
         ]));
         return self::rows($res);
     }
 
-    /** Štatistiky vozidiel */
     public static function getStaCars(string $from, string $to): array {
         $res = self::call('_getStaCars', array_merge(self::auth(), [
             'GMDateFrom' => $from,
-            'GMDateTo'   => $to,
+            'GMDateTo' => $to,
         ]));
         return self::rows($res);
     }
 
-    /** Hodnotenie štýlu jazdy vodiča */
     public static function getDriverRating(int $driverId, string $from, string $to): array {
         $res = self::call('_getDriverRating', array_merge(self::auth(), [
-            'IdDriver'   => $driverId,
+            'IdDriver' => $driverId,
             'GMDateFrom' => $from,
-            'GMDateTo'   => $to,
+            'GMDateTo' => $to,
         ]));
         return self::rows($res);
     }
-
-    // ------------------------------------------------------------------ //
-    //  Interné pomocné metódy
-    // ------------------------------------------------------------------ //
 
     private static function auth(): array {
         return [
-            'kodf'     => WD_KODF,
+            'kodf' => WD_KODF,
             'username' => WD_USERNAME,
-            'pass'     => WD_PASSWORD,
+            'pass' => WD_PASSWORD,
         ];
     }
 
-    /**
-     * Vykoná SOAP volanie a vráti SimpleXMLElement "return" sekcie.
-     */
+    // posle SOAP request a vrati obsah <return>
     private static function call(string $method, array $params): ?string {
         $paramsXml = '';
         foreach ($params as $key => $val) {
@@ -211,16 +185,16 @@ class WebdispecinkService {
   </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>
 XML;
-        // PHP heredoc nepodporuje self:: — musíme vložiť namespace ručne
+        // heredoc nevie self::, doplnam string-replace
         $envelope = str_replace('{self::NAMESPACE}', self::NAMESPACE, $envelope);
 
         $ch = curl_init(self::ENDPOINT);
         curl_setopt_array($ch, [
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $envelope,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $envelope,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 30,
-            CURLOPT_HTTPHEADER     => [
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => [
                 'Content-Type: text/xml; charset=UTF-8',
                 'SOAPAction: "' . self::NAMESPACE . '#' . $method . '"',
             ],
@@ -238,44 +212,36 @@ XML;
             throw new RuntimeException("SOAP chyba HTTP $httpCode: " . substr($response, 0, 300));
         }
 
-        // Parsovanie odpovede
-        // Fault check
+        // SOAP fault?
         if (strpos($response, '<faultstring>') !== false) {
             preg_match('/<faultstring>(.*?)<\/faultstring>/s', $response, $m);
             throw new RuntimeException('SOAP Fault: ' . ($m[1] ?? 'unknown'));
         }
 
-        // Vyberieme obsah <return>...</return>
         if (!preg_match('/<return[^>]*>(.*?)<\/return>/s', $response, $m)) {
-            return null; // prázdna odpoveď (napr. _login vracia bool)
+            return null;
         }
 
         return $m[1];
     }
 
-    /**
-     * Prevedie XML string na array of arrays.
-     * Podporuje: <item><field>val</field></item> aj <return><field>val</field></return>
-     */
+    // XML -> pole poli. Vie aj <item>...</item> aj plain <return>...</return>
     private static function rows(?string $xml): array {
         if ($xml === null || trim($xml) === '') return [];
 
-        // Pokus: pole <item> elementov
+        // 1. skusam najst <item> elementy
         preg_match_all('/<item[^>]*>(.*?)<\/item>/s', $xml, $items);
         if (!empty($items[1])) {
             return array_map([self::class, 'parseFields'], $items[1]);
         }
 
-        // Fallback: priame pole polí (každý tag = riadok)
-        // napr. <row>...</row> alebo akýkoľvek opakujúci sa tag
+        // 2. fallback - kazdy opakujuci sa tag = jeden riadok
         preg_match_all('/<([a-zA-Z][a-zA-Z0-9_]*)>(.*?)<\/\1>/s', $xml, $tags, PREG_SET_ORDER);
         if (empty($tags)) return [];
 
-        // Ak prvý child sám obsahuje children — je to pole
-        $firstTag = $tags[0][1];
+        // ak prvy child obsahuje deti, je to pole
         $firstContent = $tags[0][2];
         if (strpos($firstContent, '<') !== false) {
-            // Pole riadkov — každý tag je riadok
             $result = [];
             foreach ($tags as $tag) {
                 $row = self::parseFields($tag[2]);
@@ -284,11 +250,10 @@ XML;
             return $result;
         }
 
-        // Inak je to jediný objekt — vrátime ako jeden riadok
+        // inak je to jeden objekt
         return [self::parseFields($xml)];
     }
 
-    /** Parsuje <field>value</field> páry z XML stringu */
     private static function parseFields(string $xml): array {
         preg_match_all('/<([a-zA-Z][a-zA-Z0-9_]*)>(.*?)<\/\1>/s', $xml, $m, PREG_SET_ORDER);
         $row = [];

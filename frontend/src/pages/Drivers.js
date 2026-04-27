@@ -18,7 +18,7 @@ function formatDriveTime(str) {
   return `${h} h${m ? ` ${m} min` : ''}`;
 }
 
-// ─── Karta vodiča ─────────────────────────────────────────────────────────────
+// karta vodica v gridu
 
 function DriverCard({ driver, onClick }) {
   const isDriving  = driver.is_driving;
@@ -80,7 +80,7 @@ function DriverCard({ driver, onClick }) {
   );
 }
 
-// ─── Modal detailu / editácie ─────────────────────────────────────────────────
+// modal: detail + editacia
 
 const TYP_ZMLUVY = { hlavny_pomer: 'Hlavný pracovný pomer', dohoda: 'Dohoda', brigada: 'Brigáda', ine: 'Iné' };
 const TYP_DOC    = { obciansky_preukaz: 'Občiansky preukaz', poistka_vodica: 'Poistka vodiča', pracovna_zmluva: 'Pracovná zmluva', certifikat_a1: 'Certifikát A1', psychotest: 'Psychotest', ine: 'Iné' };
@@ -255,7 +255,7 @@ function DriverModal({ driver, onClose, userId }) {
           {error   && <div className="alert alert-error"   style={{ marginBottom: '1rem' }}>{error}</div>}
           {success && <div className="alert alert-success" style={{ marginBottom: '1rem' }}>{success}</div>}
 
-          {/* ── TAB: Informácie ── */}
+          {/* tab: info */}
           {tab === 'info' && mode === 'view' && (
             <>
               <Section title="Z Webdispečink">
@@ -302,7 +302,7 @@ function DriverModal({ driver, onClose, userId }) {
             </form>
           )}
 
-          {/* ── TAB: Pracovné ── */}
+          {/* tab: pracovne udaje */}
           {tab === 'work' && mode === 'view' && (
             <Section title="Pracovné informácie">
               {dbLoading ? <div style={{ color: 'var(--gray-400)' }}>Načítavam...</div> : (
@@ -343,7 +343,7 @@ function DriverModal({ driver, onClose, userId }) {
             </form>
           )}
 
-          {/* ── TAB: Dokumenty ── */}
+          {/* tab: dokumenty */}
           {tab === 'docs' && (
             <>
               {docs.length === 0 && !showUpload && (
@@ -407,7 +407,7 @@ function DriverModal({ driver, onClose, userId }) {
   );
 }
 
-// ─── Pomocné mini-komponenty ──────────────────────────────────────────────────
+// male reusable kusy
 
 function Section({ title, children }) {
   return (
@@ -441,7 +441,7 @@ function InfoRow({ label, value }) {
   );
 }
 
-// ─── Stránka vodičov ──────────────────────────────────────────────────────────
+// hlavna stranka /vodici
 
 function Drivers() {
   const { user } = useAuth();

@@ -1,7 +1,7 @@
 <?php
 // Palmer Fleet – Vehicle details (ECV-based, rovnaký princíp ako driver_details)
 
-// ─── Detail + upsert ──────────────────────────────────────────────────────────
+// detail + upsert
 
 function getVehicleDetail(string $ecv): void {
     Auth::requireAuth();
@@ -42,16 +42,16 @@ function upsertVehicleDetail(string $ecv, array $input): void {
     sendJSON(['details' => $stmt->fetch() ?: (object)[]]);
 }
 
-// ─── Termíny ──────────────────────────────────────────────────────────────────
+// terminy (deadlines)
 
-/** Vypočíta automatický stav podľa počtu zostávajúcich dní */
+// auto stav podla dni do expiracie
 function computeAutoStav(int $days): string {
     if ($days < 0)  return 'expirovany';
     if ($days < 30) return 'upozornujuci';
     return 'dobry';
 }
 
-/** Vráti efektívny stav (manuálny override alebo auto) + príznak či je manuálny */
+// efektivny stav: bud manualny override z DB alebo auto-vypocet
 function resolveStav(?string $stavDb, int $days): array {
     if ($stavDb !== null && $stavDb !== '') {
         return ['stav' => $stavDb, 'stav_manual' => true];
@@ -149,7 +149,7 @@ function deleteVehicleDeadlineDetail(string $ecv, int $dlId): void {
     sendJSON(['message' => 'Termín bol zmazaný']);
 }
 
-// ─── Dokumenty ────────────────────────────────────────────────────────────────
+// dokumenty
 
 if (!defined('VEH_UPLOAD_DIR')) {
     define('VEH_UPLOAD_DIR', realpath(__DIR__ . '/../uploads/vehicle_documents') . '/');
@@ -230,7 +230,7 @@ function deleteVehicleDocumentDetail(string $ecv, int $docId): void {
     sendJSON(['message' => 'Dokument bol zmazaný']);
 }
 
-// ─── Servisné záznamy ─────────────────────────────────────────────────────────
+// servisne zaznamy
 
 function getServiceRecordsDetail(string $ecv): void {
     Auth::requireAuth();

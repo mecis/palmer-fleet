@@ -1,5 +1,5 @@
 <?php
-// Palmer Fleet – Driver details & documents API
+// detaily a dokumenty vodicov
 
 if (!defined('DRV_UPLOAD_DIR')) {
     define('DRV_UPLOAD_DIR', realpath(__DIR__ . '/../uploads/driver_documents') . '/');
@@ -8,8 +8,7 @@ if (!defined('DRV_AES_KEY')) {
     define('DRV_AES_KEY', DB_NAME . '_drv_aes_2025');
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
+// helpery na encrypt/decrypt rodneho cisla a na log
 function encryptRC(string $val): string {
     $iv  = random_bytes(16);
     $enc = openssl_encrypt($val, 'AES-256-CBC', DRV_AES_KEY, 0, $iv);
@@ -35,8 +34,7 @@ function drvLog(array $user, string $akcia, string $popis): void {
     } catch (Exception $e) {}
 }
 
-// ─── GET /drivers/{wdId} ─────────────────────────────────────────────────────
-
+// GET /drivers/{wdId}
 function getDriverDetail(int $wdId): void {
     $user = Auth::requireAuth();
     if (!in_array($user['rola'], ['admin', 'dispecer', 'manazer'])) {
@@ -64,8 +62,7 @@ function getDriverDetail(int $wdId): void {
     sendJSON(['details' => $d, 'documents' => $docs->fetchAll()]);
 }
 
-// ─── PUT /drivers/{wdId} ─────────────────────────────────────────────────────
-
+// PUT /drivers/{wdId}
 function saveDriverDetail(int $wdId, array $input): void {
     $user = Auth::requireRole(['admin', 'dispecer', 'manazer']);
     $pdo  = Database::connect();
@@ -104,8 +101,7 @@ function saveDriverDetail(int $wdId, array $input): void {
     sendJSON(['message' => 'Detaily vodiča uložené']);
 }
 
-// ─── POST /drivers/{wdId}/documents ─────────────────────────────────────────
-
+// POST /drivers/{wdId}/documents
 function uploadDriverDocument(int $wdId): void {
     $user = Auth::requireRole(['admin', 'dispecer', 'manazer']);
     $pdo  = Database::connect();
@@ -140,8 +136,7 @@ function uploadDriverDocument(int $wdId): void {
     sendJSON(['message' => 'Dokument bol nahraný', 'id' => $pdo->lastInsertId()]);
 }
 
-// ─── GET /drivers/{wdId}/documents/{docId} ──────────────────────────────────
-
+// GET /drivers/{wdId}/documents/{docId}
 function downloadDriverDocument(int $wdId, int $docId): void {
     Auth::requireRole(['admin', 'dispecer', 'manazer']);
     $pdo = Database::connect();
@@ -161,8 +156,7 @@ function downloadDriverDocument(int $wdId, int $docId): void {
     exit;
 }
 
-// ─── DELETE /drivers/{wdId}/documents/{docId} ───────────────────────────────
-
+// DELETE /drivers/{wdId}/documents/{docId}
 function deleteDriverDocument(int $wdId, int $docId): void {
     $user = Auth::requireRole(['admin']);
     $pdo  = Database::connect();

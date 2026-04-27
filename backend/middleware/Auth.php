@@ -1,24 +1,22 @@
 <?php
-// Palmer Fleet - JWT Autentifikácia
+// JWT auth middleware - vlastna implementacia (HS256)
 
 require_once __DIR__ . '/../config/database.php';
 
 class Auth {
-    
-    /**
-     * Vytvorí JWT token pre používateľa
-     */
+
+    // vygeneruje token pri prihlaseni; expirovany za 8h
     public static function generateToken(array $user): string {
         $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
         $payload = json_encode([
-            'id'           => $user['id'],
-            'email'        => $user['email'],
-            'rola'         => $user['rola'],
+            'id' => $user['id'],
+            'email' => $user['email'],
+            'rola' => $user['rola'],
             'wd_driver_id' => isset($user['wd_driver_id']) ? (int)$user['wd_driver_id'] : null,
-            'exp'          => time() + (60 * 60 * 8) // 8 hodín
+            'exp' => time() + (60 * 60 * 8),
         ]);
 
-        $base64Header  = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
+        $base64Header = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
         $base64Payload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
 
         $signature = hash_hmac('sha256', "$base64Header.$base64Payload", JWT_SECRET, true);
@@ -27,10 +25,7 @@ class Auth {
         return "$base64Header.$base64Payload.$base64Signature";
     }
 
-    /**
-     * Overí JWT token z Authorization hlavičky
-     * Vráti payload alebo null
-     */
+    // overi token z Authorization hlavicky, vrati payload alebo null
     public static function verifyToken(): ?array {
         $headers = getallheaders();
         $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
@@ -48,7 +43,7 @@ class Auth {
 
         [$base64Header, $base64Payload, $base64Signature] = $parts;
 
-        // Overenie podpisu
+        // overim podpis
         $signature = hash_hmac('sha256', "$base64Header.$base64Payload", JWT_SECRET, true);
         $expectedSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
 
@@ -58,7 +53,7 @@ class Auth {
 
         $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $base64Payload)), true);
 
-        // Overenie expirácie
+        // expiracia
         if (!$payload || ($payload['exp'] ?? 0) < time()) {
             return null;
         }
@@ -66,27 +61,23 @@ class Auth {
         return $payload;
     }
 
-    /**
-     * Vyžaduje prihlásenie - ak nie je token, vráti 401
-     */
+    // ak token chyba alebo neplatny -> 401
     public static function requireAuth(): array {
         $user = self::verifyToken();
         if (!$user) {
             http_response_code(401);
-            echo json_encode(['error' => 'Neautorizovaný prístup']);
+            echo json_encode(['error' => 'Neautorizovany pristup']);
             exit;
         }
         return $user;
     }
 
-    /**
-     * Vyžaduje konkrétnu rolu
-     */
+    // ak rola nesedi -> 403
     public static function requireRole(array $allowedRoles): array {
         $user = self::requireAuth();
         if (!in_array($user['rola'], $allowedRoles)) {
             http_response_code(403);
-            echo json_encode(['error' => 'Nedostatočné oprávnenie']);
+            echo json_encode(['error' => 'Nedostatocne opravnenie']);
             exit;
         }
         return $user;
